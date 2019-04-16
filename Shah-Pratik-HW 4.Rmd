@@ -1,0 +1,109 @@
+---
+title: "Shah-Pratik-HomeWork4"
+author: "Pratik, Celeste"
+date: "April 15, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(gridExtra)
+library(manipulate)
+library(lmodel2)
+library(curl)
+library(dplyr)
+
+```
+
+## 1
+
+### [1] Using the KamilarAndCooperData.csv dataset, run a linear regression looking at log(HomeRange_km2) in relation to log(Body_mass_female_mean) and report your ?? coeffiecients (slope and intercept).
+
+
+```{r}
+f <- curl("https://raw.githubusercontent.com/difiore/ADA-2019/master/KamilarAndCooperData.csv")
+d <- read_csv(f, col_names = TRUE)
+head(d)
+
+m <- lm(log(d$HomeRange_km2)~log(d$Body_mass_female_mean), data = d)
+m
+
+names(m)
+
+m$coefficients ##Beta0 = -9.44 and Beta1 = 1.036
+
+```
+
+###[2] Then, use bootstrapping to sample from your data 1000 times with replacement, each time fitting the same model and calculating the appropriate coefficients.The size of each sample should be equivalent to the number of observations in your dataset.This generates a sampling distribution for each β coefficient. 
+Plot a histogram of these sampling distributions.
+
+```{r}
+log(d$HomeRange_km2)
+log(d$Body_mass_female_mean)
+length(d$Body_mass_female_mean) #n = 213
+
+
+sim <-NULL
+n<- 213
+for (i in 1:1000) {
+  a<- d[sample(nrow(d),size=n, replace = TRUE),]
+  b<- lm(data=a, log(a$HomeRange_km2)~ log(a$Body_mass_female_mean))
+  sim[i]<- list(b$coefficients)
+}
+head(sim)
+h<-do.call(rbind,sim)
+h<- as.data.frame(h)
+colnames(h)<- c("Beta_0","Beta_1")
+head(h)
+
+hist(h$Beta_0)
+hist(h$Beta_1)
+
+
+
+
+```
+
+###[3] Estimate the standard error for each of your ?? coefficients as the standard deviation of the sampling distribution from your bootstrap.
+
+
+
+```{r}
+se <- function(x) sqrt(var(x)/length(x))
+se(h$Beta_0)
+se(h$Beta_1)
+
+```
+
+###[4] Also determine the 95% CI for each of your beta coefficients based on the appropriate quantiles from your sampling distribution.
+
+```{r}
+#CI for Beta 0
+quantile(h$Beta_0, c(0.025, 0.975))
+
+#CI for Beta 1
+quantile(h$Beta_1, c(0.025, 0.975))
+
+```
+
+###[5] How does your answer to part [3] compare to the SE estimated from your entire dataset using the formula for standard error implemented in lm()?
+
+####SE Estimate from entire dataset= Intercept/Beta0= 0.6729, Beta1= 0.08488
+####SE of Beta 0 = 0.0189
+####SE of Beta 1 = 0.0024
+
+#[6] How does your answer to part [4] compare to the 95% CI estimated from your entire dataset?
+
+```{r}
+alpha<- 0.05
+mCI<- confint(m, level = 1-alpha)
+mCI
+quantile(h$Beta_0, c(0.025, 0.975))
+quantile(h$Beta_1, c(0.025, 0.975))
+
+```
+###The 95% Confidence Intervals are very similar. For the entire data set, with regards to Beta 0, the intervals are -10.77 and -8.11, while the intervals for our sample distribution of Beta 0 are -10.73 and -8.30. For the entire data set, with regards to Beta 1, the intervals are 0.87 and 1.20, while the intervals for our sample distribution of Beta 1 are 0.89 and 1.20.
